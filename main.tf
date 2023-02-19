@@ -37,8 +37,8 @@ module "eks_iam_roles" {
   source = "./eks/eks_iam_roles"
 }
 
-module "eks_sec_group" {
-  source           = "./eks/eks_sec_group"
+module "sec_group_eks" {
+  source           = "./network/sec_group_eks"
   eks_cluster_name = var.eks_cluster_name
   vpc_id           = module.vpc.vpc_id
 }
@@ -53,11 +53,11 @@ module "eks_cluster" {
     "${module.subnets.subnets}",
   ])
 
-  security_group_cluster = module.eks_sec_group.security_group_cluster
+  security_group_cluster = module.sec_group_eks.security_group_cluster
 }
 
-module "sec_group_rds" {
-  source         = "./network/sec_group"
+module "sec_group_postgres" {
+  source         = "./network/sec_group_postgres"
   vpc_id         = module.vpc.vpc_id
   vpc_cidr_block = module.vpc.vpc_cidr_block
 }
@@ -69,7 +69,7 @@ module "postgres" {
     "${module.subnets.subnets}",
   ])
 
-  sec_grp_rds       = module.sec_group_rds.sec_grp_rds
+  sec_grp_postgres  = module.sec_group_postgres.sec_grp_postgres
   identifier        = var.identifier
   storage_type      = var.storage_type
   allocated_storage = var.allocated_storage
@@ -79,3 +79,17 @@ module "postgres" {
   db_username       = var.db_username
   db_password       = var.db_password
 }
+
+# module "sec_group_lambda" {
+#   source         = "./network/sec_group_lambda"
+#   vpc_id         = module.vpc.vpc_id
+#   vpc_cidr_block = module.vpc.vpc_cidr_block
+# }
+
+# module "lambda" {
+#   source = "./lambda"
+
+#   db_username = var.db_username
+#   db_password = var.db_password
+
+# }

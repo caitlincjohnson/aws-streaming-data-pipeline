@@ -43,7 +43,7 @@ variable "allocated_storage" {
 }
 
 variable "db_engine" {
-  description = " DB Engine Type"
+  description = "DB Engine Type"
   default     = "postgres"
 }
 

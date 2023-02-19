@@ -20,9 +20,10 @@ resource "aws_db_instance" "db" {
   name              = terraform.workspace
   username          = var.db_username
   password          = var.db_password
+  port              = 5432
 
   vpc_security_group_ids = [
-    "${var.sec_grp_rds}",
+    "${var.sec_grp_postgres}",
   ]
 
   db_subnet_group_name = aws_db_subnet_group.db_sub_gr.id

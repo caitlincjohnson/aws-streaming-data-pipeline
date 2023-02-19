@@ -22,4 +22,4 @@ variable "db_username" {}
 
 variable "db_password" {}
 
-variable "sec_grp_rds" {}
+variable "sec_grp_postgres" {}

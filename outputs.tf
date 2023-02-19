@@ -27,11 +27,11 @@ output "route_id" {
 }
 
 output "security_group_cluster" {
-  value = module.eks_sec_group.security_group_cluster
+  value = module.sec_group_eks.security_group_cluster
 }
 
 output "security_group_node" {
-  value = module.eks_sec_group.security_group_node
+  value = module.sec_group_eks.security_group_node
 }
 
 output "iam_instance_profile" {
@@ -67,7 +67,7 @@ output "eks_cluster_name" {
 }
 
 output "sec_grp_rds" {
-  value = module.sec_group_rds.sec_grp_rds
+  value = module.sec_group_postgres.sec_grp_postgres
 }
 
 output "db_subnet_group_id" {

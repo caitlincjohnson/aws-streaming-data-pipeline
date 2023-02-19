@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+### Terraform ###
+# Local .terraform directories
+**/.terraform/*
+.terraform.lock.hcl

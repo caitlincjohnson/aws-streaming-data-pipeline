@@ -130,6 +130,9 @@ dmypy.json
 
 
 ### Terraform ###
-# Local .terraform directories
 **/.terraform/*
 .terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfvars
+tfplan

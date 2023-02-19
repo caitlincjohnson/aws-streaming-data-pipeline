@@ -1,90 +1,81 @@
-/*
-The provider block configures the specific provider. You can use multiple
-provider blocks in your Terraform configuration to manage resources from
-different providers.
-*/
+# Specify the Provider and Access Details
 provider "aws" {
-  region = var.region
+  access_key = var.access_key
+  secret_key = var.secret_key
+  region     = var.aws_region
+  profile    = var.aws_profile
 }
 
-data "aws_availability_zones" "available" {}
-
-locals {
-  cluster_name = "education-eks-${random_string.suffix.result}"
-}
-
-/*
-The resource block defines components of the infrastructure. It also
-contains arguments which you use to configure the resource. Arguments
-can include things like machine sizes, disk image names, etc.
-*/
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-}
-
+## Network
+# Create VPC
 module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "3.19.0"
-
-  name = "education-vpc"
-
-  cidr = "10.0.0.0/16"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 3)
-
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
-
-  public_subnet_tags = {
-    "kubernetes.io/cluster/${local.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"                      = 1
-  }
-
-  private_subnet_tags = {
-    "kubernetes.io/cluster/${local.cluster_name}" = "shared"
-    "kubernetes.io/role/internal-elb"             = 1
-  }
+  source           = "./network/vpc"
+  eks_cluster_name = var.eks_cluster_name
+  cidr_block       = var.cidr_block
 }
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "19.5.1"
+# Create Subnets
+module "subnets" {
+  source           = "./network/subnets"
+  eks_cluster_name = var.eks_cluster_name
+  vpc_id           = module.vpc.vpc_id
+  vpc_cidr_block   = module.vpc.vpc_cidr_block
+}
 
-  cluster_name    = local.cluster_name
-  cluster_version = "1.24"
+# Configure Routes
+module "route" {
+  source              = "./network/route"
+  main_route_table_id = module.vpc.main_route_table_id
+  gw_id               = module.vpc.gw_id
 
-  vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.private_subnets
-  cluster_endpoint_public_access = true
+  subnets = flatten([
+    "${module.subnets.subnets}",
+  ])
+}
 
-  eks_managed_node_group_defaults = {
-    ami_type = "AL2_x86_64"
+module "eks_iam_roles" {
+  source = "./eks/eks_iam_roles"
+}
 
-  }
+module "eks_sec_group" {
+  source           = "./eks/eks_sec_group"
+  eks_cluster_name = var.eks_cluster_name
+  vpc_id           = module.vpc.vpc_id
+}
 
-  eks_managed_node_groups = {
-    one = {
-      name = "node-group-1"
+module "eks_cluster" {
+  source           = "./eks/eks_cluster"
+  eks_cluster_name = var.eks_cluster_name
+  iam_cluster_arn  = module.eks_iam_roles.iam_cluster_arn
+  iam_node_arn     = module.eks_iam_roles.iam_node_arn
 
-      instance_types = ["t3.small"]
+  subnets = flatten([
+    "${module.subnets.subnets}",
+  ])
 
-      min_size     = 1
-      max_size     = 3
-      desired_size = 2
-    }
+  security_group_cluster = module.eks_sec_group.security_group_cluster
+}
 
-    two = {
-      name = "node-group-2"
+module "sec_group_rds" {
+  source         = "./network/sec_group"
+  vpc_id         = module.vpc.vpc_id
+  vpc_cidr_block = module.vpc.vpc_cidr_block
+}
 
-      instance_types = ["t3.small"]
+module "postgres" {
+  source = "./rds/postgres"
 
-      min_size     = 1
-      max_size     = 2
-      desired_size = 1
-    }
-  }
+  subnets = flatten([
+    "${module.subnets.subnets}",
+  ])
+
+  sec_grp_rds       = module.sec_group_rds.sec_grp_rds
+  identifier        = var.identifier
+  storage_type      = var.storage_type
+  allocated_storage = var.allocated_storage
+  db_engine         = var.db_engine
+  engine_version    = var.engine_version
+  instance_class    = var.instance_class
+  db_username       = var.db_username
+  db_password       = var.db_password
 }

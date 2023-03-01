@@ -128,6 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+### Custom Folders ###
+/project-template
 
 ### Terraform ###
 **/.terraform/*
